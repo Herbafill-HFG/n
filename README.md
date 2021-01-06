@@ -31,7 +31,7 @@ Since you probably already have `node`, the easiest way to install `n` is throug
 
     npm install -g n
 
-Once installed, `n` caches `node` versions in subdirectory `n/versions` of the directory specified in environment variable `N_PREFIX`, which defaults to `/usr/local`; and the _active_ `node` version is installed directly in `N_PREFIX`.
+Once installed, `n` caches `node` versions in subdirectory `n/versions` of the directory specified in environment variable `N_PREFIX`, which defaults to `/usr/local`; and the _active_ `node` version is installed under `N_PREFIX`.
 
 To avoid requiring `sudo` for `n` and `npm` global installs, it is suggested you either install to your home directory using `N_PREFIX`, or take ownership of the system directories:
 
@@ -110,19 +110,20 @@ There is an `auto` label to read the target version from a file in the current d
 - `.n-node-version`: version on single line. Custom to `n`.
 - `.node-version`: version on single line. Used by multiple tools: [node-version-usage](https://github.com/shadowspawn/node-version-usage)
 - `.nvmrc`: version on single line. Used by `nvm`.
-- `package.json`: use `engines` field to determine compatible `node`. Requires an installed version of `node`, and uses `npx semver` to resolve complex ranges.
+- if no version file found, look for `engine` as below.
+
+The `engine` label looks for a `package.json` file and reads the `engines` field to determine compatible `node`. Requires an installed version of `node`, and uses `npx semver` to resolve complex ranges.
 
 There is support for the named release streams:
 
 - `argon`, `boron`, `carbon`: codenames for LTS release streams
 
-These node support aliases may be used, although simply simply resolve to the latest matching version:
+These node support aliases may be used, although simply resolve to the latest matching version:
 
 - `active`, `lts_active`, `lts_latest`, `lts`, `current`, `supported`
 
 The last version form is for specifying [other releases](https://nodejs.org/download) available using the name of the remote download folder optionally followed by the complete or incomplete version.
 
-- `chakracore-release/latest`
 - `nightly`
 - `test/v11.0.0-test20180528`
 - `rc/10`

@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- markdownlint-disable MD024 -->
 
+## [7.0.0] (2020-12-20)
+
+### Changed
+
+- `auto` label now scans for `package.json` only if it can not find a version control file ([#644])
+
+### Added
+
+- `engine` label to look for `engines.node` in `package.json` (as used by`auto`) ([#644])
+- 
+### Fixed
+
+- avoid colorized grep output via `GREP_OPTIONS` breaking version lookup ([#643])
+
+## [6.8.0] (2020-12-12)
+
+### Fixed
+
+- suppress unwanted warning during `auto` when using npx with npm 7
+- temporary fix for installing on Mac with Apple M1 chip, look for x64 versions of node as arm64 not available yet
+
+## [6.7.1] (2020-11-25)
+
+### Fixed
+
+- detect and handle a failed download of full archive ([#635])
+
 ## [6.7.0] (2020-07-25)
 
 ### Added
@@ -297,10 +324,17 @@ Only minor functional changes, but technically could break scripts relying on sp
 [#614]: https://github.com/tj/n/issues/614
 [#616]: https://github.com/tj/n/issues/616
 [#624]: https://github.com/tj/n/issues/624
+[#635]: https://github.com/tj/n/pull/635
+[#643]: https://github.com/tj/n/pull/643
+[#644]: https://github.com/tj/n/pull/644
 
 <!-- reference links for releases -->
 
 [Unreleased]: https://github.com/tj/n/compare/master...develop
+[7.0.0]: https://github.com/tj/n/compare/v6.8.0...v7.0.0
+[6.8.0]: https://github.com/tj/n/compare/v6.7.1...v6.8.0
+[6.7.1]: https://github.com/tj/n/compare/v6.7.0...v6.7.1
+[6.7.0]: https://github.com/tj/n/compare/v6.6.0...v6.7.0
 [6.6.0]: https://github.com/tj/n/compare/v6.5.1...v6.6.0
 [6.5.1]: https://github.com/tj/n/compare/v6.5.0...v6.5.1
 [6.5.0]: https://github.com/tj/n/compare/v6.4.0...v6.5.0

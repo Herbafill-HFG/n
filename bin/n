@@ -40,10 +40,19 @@ function echo_red() {
 }
 
 #
+# Synopsis: n_grep <args...>
+# grep wrapper to ensure consistent grep options and circumvent aliases.
+#
+
+function n_grep() {
+  GREP_OPTIONS='' command grep "$@"
+}
+
+#
 # Setup and state
 #
 
-VERSION="6.7.0"
+VERSION="7.0.0"
 
 N_PREFIX="${N_PREFIX-/usr/local}"
 N_PREFIX=${N_PREFIX%/}
@@ -213,7 +222,7 @@ function is_lts_codename() {
 
 function is_download_folder() {
   # e.g. nightly
-  [[ "$1" =~ ^(chakracore-nightly|chakracore-rc|chakracore-release|next-nightly|nightly|rc|release|test|v8-canary)$ ]]
+  [[ "$1" =~ ^(next-nightly|nightly|rc|release|test|v8-canary)$ ]]
 }
 
 #
@@ -364,10 +373,11 @@ Versions:
     lts               Newest Long Term Support official release
     latest, current   Newest official release
     auto              Read version from file: .n-node-version, .node-version, .nvmrc, or package.json
+    engine            Read version from package.json
     boron, carbon     Codenames for release streams
     lts_latest        node support aliases
 
-    and nightly, chakracore-release/latest, rc/10 et al
+    and nightly, rc/10 et al
 
 EOF
 }
@@ -383,7 +393,7 @@ err_no_installed_print_help() {
 #
 
 function next_version_installed() {
-  display_cache_versions | grep "$1" -A 1 | tail -n 1
+  display_cache_versions | n_grep "$1" -A 1 | tail -n 1
 }
 
 #
@@ -392,7 +402,7 @@ function next_version_installed() {
 #
 
 function prev_version_installed() {
-  display_cache_versions | grep "$1" -B 1 | head -n 1
+  display_cache_versions | n_grep "$1" -B 1 | head -n 1
 }
 
 #
@@ -436,7 +446,7 @@ function set_active_node() {
 display_versions_paths() {
   find "$CACHE_DIR" -maxdepth 2 -type d \
     | sed 's|'"$CACHE_DIR"'/||g' \
-    | grep -E "/[0-9]+\.[0-9]+\.[0-9]+" \
+    | n_grep -E "/[0-9]+\.[0-9]+\.[0-9]+" \
     | sed 's|/|.|' \
     | sort -k 1,1 -k 2,2n -k 3,3n -k 4,4n -t . \
     | sed 's|\.|/|'
@@ -492,18 +502,18 @@ menu_select_cache_versions() {
   while true; do
     read -rsn 1 key
     case "$key" in
-      $ESCAPE_SEQ)
+      "$ESCAPE_SEQ")
         # Handle ESC sequences followed by other characters, i.e. arrow keys
         read -rsn 1 -t 1 tmp
         if [[ "$tmp" == "[" ]]; then
           read -rsn 1 -t 1 arrow
           case "$arrow" in
-            $UP)
+            "$UP")
               clear
               selected="$(prev_version_installed "${selected}")"
               display_versions_with_selected "${selected}"
               ;;
-            $DOWN)
+            "$DOWN")
               clear
               selected="$(next_version_installed "${selected}")"
               display_versions_with_selected "${selected}"
@@ -675,7 +685,6 @@ install() {
     fi
   fi
 
-  echo
   log installing "${g_mirror_folder_name}-v$version"
 
   local url="$(tarball_url "$version")"
@@ -689,6 +698,9 @@ install() {
 
   log fetch "$url"
   do_get "${url}" | tar "$tarflag" --strip-components=1 --no-same-owner
+  if [[ "${PIPESTATUS[0]}" -ne 0 ]]; then
+    abort "failed to download archive for $version"
+  fi
   [ "$GET_SHOWS_PROGRESS" = "true" ] && erase_line
   rm -f "$dir/n.lock"
 
@@ -697,7 +709,6 @@ install() {
   if "$ACTIVATE" ; then
     activate "${g_mirror_folder_name}/$version"
   fi
-  echo
 }
 
 #
@@ -897,8 +908,10 @@ function display_tarball_platform() {
       arch="${uname_m}"
       ;;
   esac
-  # (arch unlikely to be right for SunOS and AIX. Investigate further if/when anyone asks!)
+  # Override from command line.
   [ -n "$ARCH" ] && arch="$ARCH"
+  # Fallback to x64 if autodetecting on Apple M1, native versions not available yet.
+  [[ -z "$ARCH" && "$os" == "darwin" && "$arch" == "arm64" ]] && arch=x64
 
   echo "${os}-${arch}"
 }
@@ -955,6 +968,7 @@ function display_package_engine_version() {
   range="$(node -e "package = require('${filepath}'); if (package && package.engines && package.engines.node) console.log(package.engines.node)")"
   trace_log "read" "${range}"
   if [[ -z "${range}" || "*" == "${range}" ]]; then
+    trace_log "target" "current"
     echo "current"
     return
   fi
@@ -969,6 +983,7 @@ function display_package_engine_version() {
       \~) [[ "${version}" =~ ^([0-9]+\.[0-9]+)\.[0-9]+$ ]] && version="${BASH_REMATCH[1]}" ;;
       ^) [[ "${version}" =~ ^([0-9]+) ]] && version="${BASH_REMATCH[1]}" ;;
     esac
+    trace_log "target" "${version}"
   else
     command -v npx &> /dev/null || abort "an active version of npx is required to use complex 'engine' ranges from package.json"
     trace_log "resolving" "${range}"
@@ -976,7 +991,7 @@ function display_package_engine_version() {
     local versions_one_line=$(echo "${version_per_line}" | tr '\n' ' ')
     # Using semver@7 so works with older versions of node.
     # shellcheck disable=SC2086
-    version=$(npx --quiet semver@7 -r "${range}" ${versions_one_line} | tail -n 1)
+    version=$(npm_config_yes=true npx --quiet semver@7 -r "${range}" ${versions_one_line} | tail -n 1)
   fi
   echo "${version}"
 }
@@ -1002,10 +1017,31 @@ function display_nvmrc_version() {
 }
 
 #
+# Synopsis: display_engine_version [error-message]
+#
+
+function display_engine_version() {
+  local error_message="${1-package.json not found}"
+  local parent
+  parent="${PWD}"
+  while [[ -n "${parent}" ]]; do
+    if [[ -e "${parent}/package.json" ]]; then
+      display_package_engine_version "${parent}/package.json"
+    else
+      parent=${parent%/*}
+      continue
+    fi
+    break
+  done
+  [[ -n "${parent}" ]] || abort "${error_message}"
+}
+
+#
 # Synopsis: display_auto_version
 #
 
 function display_auto_version() {
+  # Search for a version control file first
   local parent
   parent="${PWD}"
   while [[ -n "${parent}" ]]; do
@@ -1015,25 +1051,27 @@ function display_auto_version() {
       display_file_node_version "${parent}/.node-version"
     elif [[ -e "${parent}/.nvmrc" ]]; then
       display_nvmrc_version "${parent}/.nvmrc"
-    elif [[ -e "${parent}/package.json" ]]; then
-      display_package_engine_version "${parent}/package.json"
     else
       parent=${parent%/*}
       continue
     fi
     break
   done
-  [[ -n "${parent}" ]] || abort "no file found for auto version"
+  # Fallback to package.json
+  [[ -n "${parent}" ]] || display_engine_version "no file found for auto version (.n-node-version, .node-version, .nvmrc, or package.json)"
 }
-
 #
 # Synopsis: display_latest_resolved_version version
 #
 
 function display_latest_resolved_version() {
   local version=${1}
+  # auto and engine make sense for local use and not much for ls-remote, so handled here rather than display_remote_versions
   if [[ "${version}" = "auto" ]]; then
     version="$(display_auto_version)" || return 2
+  fi
+  if [[ "${version}" = "engine" ]]; then
+    version="$(display_engine_version)" || return 2
   fi
   simple_version=${version#node/} # Only place supporting node/ [sic]
   if is_exact_numeric_version "${simple_version}"; then
@@ -1135,11 +1173,11 @@ function display_remote_versions() {
   # - restrict search to compatible files as not always available, or not at same time
   # - return status of curl command (i.e. PIPESTATUS[0])
   display_remote_index \
-    | grep -E "$(display_compatible_file_field)" \
-    | grep -E "${match}" \
+    | n_grep -E "$(display_compatible_file_field)" \
+    | n_grep -E "${match}" \
     | awk "NR<=${match_count}" \
     | cut -f 1 \
-    | grep -E -o '[^v].*'
+    | n_grep -E -o '[^v].*'
   return "${PIPESTATUS[0]}"
 }
 
@@ -1219,7 +1257,7 @@ function show_diagnostics() {
   printf "\nnode\n"
   if command -v node &> /dev/null; then
     command -v node && node --version
-    node -e 'if (process.versions.v8) console.log("JavaScript engine: v8"); if (process.versions.chakracore) console.log("JavaScript engine: chakracore")'
+    node -e 'if (process.versions.v8) console.log("JavaScript engine: v8");'
 
     printf "\nnpm\n"
     command -v npm && npm --version
