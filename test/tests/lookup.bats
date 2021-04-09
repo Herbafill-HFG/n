@@ -1,6 +1,8 @@
 #!/usr/bin/env bats
 
 load shared-functions
+load '../../node_modules/bats-support/load'
+load '../../node_modules/bats-assert/load'
 
 
 function setup() {
@@ -9,30 +11,27 @@ function setup() {
 
 
 @test "n --lts" {
-  run n --lts
-  [ "${status}" -eq 0 ]
+  output="$(n --lts)"
   local expected_version
   expected_version="$(display_remote_version lts)"
   expected_version="${expected_version#v}"
-  [ "${output}" = "${expected_version}" ]
+  assert_equal "${output}" "${expected_version}"
 }
 
 
 @test "n --stable" {
-  run n --stable
-  [ "${status}" -eq 0 ]
+  output="$(n --stable)"
   local expected_version
   expected_version="$(display_remote_version lts)"
   expected_version="${expected_version#v}"
-  [ "${output}" = "${expected_version}" ]
+  assert_equal "${output}" "${expected_version}"
 }
 
 
 @test "n --latest" {
-  run n --latest
-  [ "${status}" -eq 0 ]
+  output="$(n --latest)"
   local expected_version
   expected_version="$(display_remote_version latest)"
   expected_version="${expected_version#v}"
-  [ "${output}" = "${expected_version}" ]
+  assert_equal "${output}" "${expected_version}"
 }

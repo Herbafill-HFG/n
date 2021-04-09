@@ -1,6 +1,8 @@
 #!/usr/bin/env bats
 
 load shared-functions
+load '../../node_modules/bats-support/load'
+load '../../node_modules/bats-assert/load'
 
 function setup() {
   unset_n_env
@@ -21,9 +23,8 @@ function teardown() {
   # Check we get all the files if we uninstall and rm cache.
   echo y | n uninstall
   n rm lts
-  run find "${N_PREFIX}" -not -type d
-  [ "${status}" -eq "0" ]
-  [ "$output" = "" ]
+  output="$(find "${N_PREFIX}" -not -type d)"
+  assert_equal "$output" ""
 }
 
 
@@ -36,7 +37,6 @@ function teardown() {
   # Check we get all the files if we uninstall and rm cache.
   echo y | n uninstall
   n rm nightly/latest
-  run find "${N_PREFIX}" -not -type d
-  [ "${status}" -eq "0" ]
-  [ "$output" = "" ]
+  output="$(find "${N_PREFIX}" -not -type d)"
+  assert_equal "$output" ""
 }

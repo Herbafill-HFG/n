@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!-- markdownlint-disable MD024 -->
 
+## [7.1.0] (2021-03-12)
+
+### Added
+
+- support installs where /usr/local/share/man is a symlink (such as archlinux)
+- remove requirement for rsync for --preserve
+- avoid install pollution if user installs global packages when using n exec
+
+## [7.0.2] (2021-02-27)
+
+### Fixed
+
+- consistently log to STDOUT ([#654])
+
+## [7.0.1] (2021-01-30)
+
+### Changed
+
+- update bats, and use bats-assert for better unit test failure messages
+
+### Fixed
+
+- fail to display error in some cases for missing both `curl` and `wget` ([#649])
+
 ## [7.0.0] (2020-12-20)
 
 ### Changed
@@ -327,10 +351,15 @@ Only minor functional changes, but technically could break scripts relying on sp
 [#635]: https://github.com/tj/n/pull/635
 [#643]: https://github.com/tj/n/pull/643
 [#644]: https://github.com/tj/n/pull/644
+[#649]: https://github.com/tj/n/issues/649
+[#654]: https://github.com/tj/n/issues/654
 
 <!-- reference links for releases -->
 
 [Unreleased]: https://github.com/tj/n/compare/master...develop
+[7.1.0]: https://github.com/tj/n/compare/v7.0.2...v7.1.0
+[7.0.2]: https://github.com/tj/n/compare/v7.0.1...v7.0.2
+[7.0.1]: https://github.com/tj/n/compare/v7.0.0...v7.0.1
 [7.0.0]: https://github.com/tj/n/compare/v6.8.0...v7.0.0
 [6.8.0]: https://github.com/tj/n/compare/v6.7.1...v6.8.0
 [6.7.1]: https://github.com/tj/n/compare/v6.7.0...v6.7.1

@@ -1,6 +1,8 @@
 #!/usr/bin/env bats
 
 load shared-functions
+load '../../node_modules/bats-support/load'
+load '../../node_modules/bats-assert/load'
 
 
 function setup() {
@@ -35,8 +37,8 @@ function setup() {
   # Did not install files from top level of tarball
   [ ! -f "${N_PREFIX}/README.md" ]
 
-  run node --version
-  [ "${output}" = "v${TARGET_VERSION}" ]
+  output="$(node --version)"
+  assert_equal "${output}" "v${TARGET_VERSION}"
 
   rm -rf "${TMP_PREFIX_DIR}"
 }
